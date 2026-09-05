@@ -4,15 +4,20 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { SITE } from './site.mjs';
+import { fileURLToPath } from 'node:url';
+import { SITE, FLEET } from './site.mjs';
 import { ALL_PAGES } from './pages.mjs';
-import { head, header, footer, crumbs, pageHero, jsonLd, up } from './components.mjs';
+import { head, header, footer, crumbs, pageHero, jsonLd, up, abs, esc } from './components.mjs';
 
-const ROOT = process.cwd();
+const SOURCE = fileURLToPath(new URL('../', import.meta.url));
+const ROOT = path.resolve(process.env.SITE_OUTPUT_DIR || path.join(SOURCE, 'dist'));
+const sourceRelative = path.relative(ROOT, SOURCE);
+if (!sourceRelative || (!sourceRelative.startsWith('..') && !path.isAbsolute(sourceRelative))) {
+  throw new Error('Build output must be a separate directory, not the source folder or its parent.');
+}
+const outputs = new Map();
 const write = (file, content) => {
-  const full = path.join(ROOT, file);
-  fs.mkdirSync(path.dirname(full), { recursive: true });
-  fs.writeFileSync(full, content);
+  outputs.set(file, content);
   return content.length;
 };
 
@@ -64,7 +69,7 @@ const urls = ALL_PAGES.filter(p => !p.noindex).map(p => {
     <lastmod>${today}</lastmod>
     <changefreq>${p.slug === 'index.html' ? 'weekly' : 'monthly'}</changefreq>
     <priority>${priority(p)}</priority>
-${imgs.map(i => `    <image:image><image:loc>${SITE.origin}/${i}</image:loc></image:image>`).join('\n')}
+${imgs.map(i => `    <image:image><image:loc>${esc(abs(i))}</image:loc></image:image>`).join('\n')}
   </url>`;
 }).join('\n');
 
@@ -100,4 +105,29 @@ write('site.webmanifest', JSON.stringify({
   ]
 }, null, 2) + '\n');
 
-console.log(`\n${ALL_PAGES.length} pages · ${Math.round(total/1024)} KB of HTML · sitemap, robots.txt and manifest written.`);
+// Fetch and render everything before changing the previous successful preview.
+const manifestPath = path.join(ROOT, '.build-manifest.json');
+let previous = [];
+if (fs.existsSync(manifestPath)) previous = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+if (!Array.isArray(previous)) throw new Error('The build output manifest is invalid.');
+const outputPath = file => {
+  const full = path.resolve(ROOT, file);
+  const relative = path.relative(ROOT, full);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('Invalid generated output path.');
+  return full;
+};
+// Check stale paths before any writes. Only tracked generated files are removed.
+const stale = previous.filter(file => !outputs.has(file)).map(outputPath);
+fs.mkdirSync(ROOT, {recursive: true});
+fs.cpSync(path.join(SOURCE, 'assets'), path.join(ROOT, 'assets'), {recursive: true});
+for (const [file, content] of outputs) {
+  const full = outputPath(file);
+  fs.mkdirSync(path.dirname(full), {recursive: true});
+  fs.writeFileSync(full, content);
+}
+for (const full of stale) if (fs.existsSync(full) && fs.statSync(full).isFile()) fs.unlinkSync(full);
+fs.writeFileSync(manifestPath, JSON.stringify([...outputs.keys()], null, 2) + '\n');
+
+console.log(`\n${ALL_PAGES.length} pages · ${Math.round(total/1024)} KB of HTML · written to ${ROOT}`);
+console.log(`${FLEET.length} published active yachts loaded from Sanity.`);
+if (!FLEET.length) console.log('Publish your first yacht in Sanity Studio, then rebuild to see it on the website.');

@@ -1,5 +1,12 @@
 import { SITE, FLEET, GALLERY, GALLERY_TEASER } from './site.mjs';
-import { fleetCards, galleryTiles, galleryFilters, lightbox, abs, esc } from './components.mjs';
+import { fleetCards, featuredFleet, emptyFleetMessage, galleryTiles, galleryFilters, lightbox, abs, esc } from './components.mjs';
+
+const fleetCount = `${FLEET.length} yacht${FLEET.length === 1 ? '' : 's'}`;
+const fleetDescription = FLEET.length
+  ? `${fleetCount} available for charter in Greece. Explore the fleet and find the yacht that suits your crew.`
+  : emptyFleetMessage;
+const charterModes = [...new Set(FLEET.flatMap(y => y.charterModes))];
+const fleetCharters = charterModes.length ? `${charterModes.join(' & ')} Charters` : 'Yacht Charters';
 
 const enquire = (subject) =>
   `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}`;
@@ -177,21 +184,21 @@ const home = {
   <section id="fleet">
     <div class="wrap">
       <div class="section-head reveal">
-        <p class="eyebrow">Bareboat &amp; Skippered Charters</p>
+        <p class="eyebrow">${esc(fleetCharters)}</p>
         <h2 class="display">Our fleet</h2>
-        <p>From nimble two-cabin cruisers to spacious catamarans — every yacht is maintained to a standard worth trusting with your holiday.</p>
+        <p>${esc(fleetDescription)}</p>
       </div>
     </div>
-    <div class="fleet-band reveal">
-      <img src="${r}assets/img/fleet-band.jpg" alt="AIyachts charter yachts moored stern-to on a Greek island quay" width="1500" height="1500" loading="lazy" decoding="async">
-      <p class="fleet-band-cap">Our own boats, in our own waters</p>
-    </div>
+    ${FLEET.length ? `<div class="fleet-band reveal">
+      <img src="${esc(featuredFleet(1)[0].imageUrl)}" alt="${esc(featuredFleet(1)[0].imageAlt)}" width="1500" height="1500" loading="lazy" decoding="async">
+      <p class="fleet-band-cap">${esc(featuredFleet(1)[0].name)}</p>
+    </div>` : ''}
     <div class="wrap">
       <div class="fleet-grid reveal-stagger">
-        ${fleetCards(FLEET.filter(f => ['lagoon-40','lagoon-450-f','bavaria-51-1','jeanneau-sun-odyssey-469','beneteau-oceanis-50-family','bavaria-40-cruiser'].includes(f.slug)), 0)}
+        ${fleetCards(featuredFleet(6), 0)}
       </div>
       <div class="fleet-cta">
-        <a href="${r}fleet.html" class="btn">View all 14 yachts <span class="arrow" aria-hidden="true">→</span></a>
+        <a href="${r}fleet.html" class="btn">${FLEET.length ? `View all ${fleetCount}` : 'View the fleet'} <span class="arrow" aria-hidden="true">→</span></a>
       </div>
     </div>
   </section>
@@ -330,7 +337,7 @@ const about = {
         <article class="pillar">
           <span class="pillar-num" aria-hidden="true">01</span>
           <h3 class="display">Charter</h3>
-          <p>Bareboat and skippered charters on a maintained fleet of sailing yachts and catamarans, from two-cabin cruisers to five-cabin flagships. Ionian departures from Lefkas, Aegean departures from Athens.</p>
+          <p>${esc(fleetDescription)}</p>
           <a class="inline-link" href="${r}fleet.html">See the fleet <span class="arrow" aria-hidden="true">→</span></a>
         </article>
         <article class="pillar">
@@ -508,25 +515,26 @@ const destinations = {
    ======================================================================= */
 const fleetFilters = [
   { id:'all',       label:'All yachts' },
-  { id:'catamaran', label:'Catamarans' },
-  { id:'small',     label:'2–3 cabins' },
-  { id:'mid',       label:'4 cabins' },
-  { id:'large',     label:'5 cabins' }
+  ...(FLEET.some(y => y.type === 'Catamaran') ? [{ id:'catamaran', label:'Catamarans' }] : []),
+  ...[...new Set(FLEET.filter(y => y.type !== 'Catamaran').map(y => y.cabins))]
+    .sort((a,b) => a-b)
+    .map(cabins => ({ id:`cabin-${cabins}`, label:`${cabins} cabin${cabins === 1 ? '' : 's'} · Monohulls` }))
 ];
-const fleetGroup = y => y.type === 'Catamaran' ? 'catamaran' : (y.cabins <= 3 ? 'small' : y.cabins === 4 ? 'mid' : 'large');
+const fleetGroup = y => y.type === 'Catamaran' ? 'catamaran' : `cabin-${y.cabins}`;
 
 const fleet = {
   slug: 'fleet.html', depth: 0, nav: 'fleet.html', file: 'fleet.html',
   title: 'Yacht Charter Fleet in Greece | Sailing Yachts & Catamarans',
-  description: 'Fourteen sailing yachts and catamarans for bareboat or skippered charter in Greece — from a two-cabin cruiser to five-cabin flagships and Lagoon catamarans.',
-  ogImage: 'assets/img/og-fleet.jpg',
+  description: fleetDescription,
+  ogImage: FLEET[0]?.imageUrl || 'assets/img/og-fleet.jpg',
+  ogAlt: FLEET[0]?.imageAlt || 'AIyachts charter fleet',
   crumbs: [{label:'Fleet', href:'fleet.html'}],
   h1: 'Our fleet',
   hero: {
     img: 'assets/gallery/olive-framed-cove',
-    eyebrow: 'Bareboat & Skippered Charters',
+    eyebrow: fleetCharters,
     h1: 'Our fleet.',
-    lede: 'Fourteen yachts, from a nimble two-cabin cruiser to a flybridge catamaran that sleeps twelve. Every one maintained by the people who charter it.'
+    lede: esc(fleetDescription)
   },
   schema: [{
     '@type':'ItemList', '@id': abs('fleet.html') + '#fleet',
@@ -541,20 +549,20 @@ const fleet = {
       <div class="section-head reveal">
         <p class="eyebrow">The boats</p>
         <h2 class="display">Choose the yacht, then the sea.</h2>
-        <p>Monohulls for sailors who want to sail, catamarans for crews who want space and a level floor. Filter by size, or tell us your numbers and we will do the choosing.</p>
+        <p>${FLEET.length ? 'Explore the yachts below, or tell us your crew size and we will help you choose.' : emptyFleetMessage}</p>
       </div>
-      <div class="xg-filters fleet-filters reveal" role="group" aria-label="Filter the fleet" id="fleetFilters">
+      <div class="xg-filters fleet-filters reveal" role="group" aria-label="Filter the fleet" id="fleetFilters"${FLEET.length ? '' : ' hidden'}>
         ${fleetFilters.map((f,i) => `<button type="button" class="xg-chip" data-filter="${f.id}" aria-pressed="${i===0}">${f.label}</button>`).join('\n        ')}
       </div>
       <div class="fleet-grid full reveal-stagger" id="fleetGrid">
         ${FLEET.map(y => `<article class="yacht-card" data-cat="${fleetGroup(y)}">
       <a class="yacht-link" href="${r}fleet/${y.slug}.html">
         <div class="yacht-art">
-          <img src="${r}assets/fleet/${y.slug}.jpg" alt="${esc(y.name)} — ${esc(y.cat.toLowerCase())} charter yacht available with AIyachts in Greece" width="640" height="380" loading="lazy" decoding="async">
+          <img src="${esc(y.imageUrl)}" alt="${esc(y.imageAlt)}" width="640" height="380" loading="lazy" decoding="async">
           <span class="yacht-flag">${esc(y.type)}</span>
         </div>
         <div class="yacht-body">
-          <p class="yacht-cat">${esc(y.cat)} · ${y.year}</p>
+          <p class="yacht-cat">${esc(y.cat)} · ${esc(y.year)}</p>
           <h3 class="display">${esc(y.name)}</h3>
           <p class="yacht-tag">${esc(y.tag)}</p>
           <div class="yacht-specs"><span>${y.guests} guests</span><span>${y.berths} berths</span><span>${y.heads} ${y.heads>1?'heads':'head'}</span></div>
@@ -1098,7 +1106,7 @@ const notFound = {
         <h2 class="display">Back to the water.</h2>
       </div>
       <div class="pillar-grid reveal-stagger">
-        <article class="pillar"><span class="pillar-num" aria-hidden="true">01</span><h3 class="display">The fleet</h3><p>Fourteen sailing yachts and catamarans, from two cabins to five.</p><a class="inline-link" href="${r}fleet.html">Open the fleet <span class="arrow" aria-hidden="true">→</span></a></article>
+        <article class="pillar"><span class="pillar-num" aria-hidden="true">01</span><h3 class="display">The fleet</h3><p>${esc(fleetDescription)}</p><a class="inline-link" href="${r}fleet.html">Open the fleet <span class="arrow" aria-hidden="true">→</span></a></article>
         <article class="pillar"><span class="pillar-num" aria-hidden="true">02</span><h3 class="display">Destinations</h3><p>The Ionian from Lefkas, the Aegean from Athens — compared honestly.</p><a class="inline-link" href="${r}destinations.html">Where we sail <span class="arrow" aria-hidden="true">→</span></a></article>
         <article class="pillar"><span class="pillar-num" aria-hidden="true">03</span><h3 class="display">Experiences</h3><p>Photographs and films from real charters in the Ionian Sea.</p><a class="inline-link" href="${r}experiences.html">Open the gallery <span class="arrow" aria-hidden="true">→</span></a></article>
       </div>
@@ -1359,11 +1367,24 @@ const yachtPage = (y) => {
   const rest = FLEET.filter(f => f.slug !== y.slug && f.type !== y.type)
                     .sort((a,b) => Math.abs(a.guests - y.guests) - Math.abs(b.guests - y.guests));
   const more = sameType.concat(rest).slice(0,3);
+  const specifications = [
+    {label:'Builder', value:y.builder},
+    {label:'Model year', value:y.year},
+    {label:'Type', value:y.type},
+    {label:'Cabins', value:y.cabins},
+    {label:'Guests', value:y.guests},
+    {label:'Berths', value:y.berths},
+    {label:'Heads', value:y.heads},
+    {label:'Charter', value:y.charterModes.join(' or ')},
+    {label:'Bases', value:y.bases.join(' · ')},
+    ...y.specs
+  ].filter(spec => spec.value !== '');
   return {
     slug: `fleet/${y.slug}.html`, depth: 1, nav: 'fleet.html', file: `fleet/${y.slug}.html`,
     title: `${y.name} Yacht Charter Greece | AIyachts`,
-    description: `Charter the ${y.name} (${y.year}) in Greece — ${y.cabins} cabins, ${y.guests} guests, ${y.heads} ${y.heads>1?'heads':'head'}. Bareboat or skippered from our Lefkas and Athens bases.`,
-    ogImage: `assets/fleet/${y.slug}.jpg`,
+    description: `Charter the ${y.name} (${y.year}) in Greece — ${y.cabins} cabins, ${y.guests} guests, ${y.heads} ${y.heads>1?'heads':'head'}.${y.charterModes.length ? ` ${y.charterModes.join(' or ')}.` : ''}${y.bases.length ? ` Departing from ${y.bases.join(' or ')}.` : ''}`,
+    ogImage: y.imageUrl,
+    ogAlt: y.imageAlt,
     ogType: 'product',
     crumbs: [{label:'Fleet', href:'fleet.html'}, {label:y.name, href:`fleet/${y.slug}.html`}],
     h1: y.name,
@@ -1371,28 +1392,21 @@ const yachtPage = (y) => {
       '@type':'Product', '@id': abs(`fleet/${y.slug}.html`) + '#yacht',
       name: y.name, brand: {'@type':'Brand', name: y.builder},
       category: y.type === 'Catamaran' ? 'Catamaran charter' : 'Sailing yacht charter',
-      image: abs(`assets/fleet/${y.slug}.jpg`),
+      image: [y.imageUrl, ...y.gallery.map(photo => photo.url)],
       description: y.blurb,
       productionDate: y.year,
-      additionalProperty: [
-        {'@type':'PropertyValue', name:'Cabins', value: y.cabins},
-        {'@type':'PropertyValue', name:'Guests', value: y.guests},
-        {'@type':'PropertyValue', name:'Berths', value: y.berths},
-        {'@type':'PropertyValue', name:'Heads', value: y.heads},
-        {'@type':'PropertyValue', name:'Year', value: y.year},
-        {'@type':'PropertyValue', name:'Type', value: y.type}
-      ]
+      additionalProperty: specifications.map(spec => ({'@type':'PropertyValue', name:spec.label, value:spec.value}))
     }],
     body: (r) => `
   <section class="yacht-hero">
     <div class="wrap">
       <div class="yacht-hero-grid">
         <div class="yacht-hero-media reveal">
-          <img src="${r}assets/fleet/${y.slug}.jpg" alt="${esc(y.name)} ${esc(y.type.toLowerCase())} available for charter with AIyachts in Greece" width="1280" height="760" fetchpriority="high" decoding="async">
+          <img src="${esc(y.imageUrl)}" alt="${esc(y.imageAlt)}" width="1280" height="760" fetchpriority="high" decoding="async">
           <span class="yacht-flag big">${esc(y.type)}</span>
         </div>
         <div class="yacht-hero-copy reveal">
-          <p class="eyebrow">${esc(y.builder)} · ${y.year}</p>
+          <p class="eyebrow">${esc(y.builder)} · ${esc(y.year)}</p>
           <h1 class="display">${esc(y.name)}</h1>
           <p class="yacht-tagline">${esc(y.tag)}</p>
           <p class="yacht-blurb">${esc(y.blurb)}</p>
@@ -1414,28 +1428,20 @@ const yachtPage = (y) => {
   <section class="band-raised">
     <div class="wrap">
       <div class="two-col reveal">
-        <div>
+        ${y.highlights.length ? `<div>
           <p class="eyebrow">Why this one</p>
           <h2 class="display">What she is good at.</h2>
           <ul class="tick-list">
             ${y.highlights.map(h => `<li>${esc(h)}</li>`).join('\n            ')}
           </ul>
-        </div>
+        </div>` : ''}
         <div>
           <p class="eyebrow">Specification</p>
           <h2 class="display">The numbers.</h2>
           <table class="spec-table">
             <caption class="sr-only">Specification of the ${esc(y.name)}</caption>
             <tbody>
-              <tr><th scope="row">Builder</th><td>${esc(y.builder)}</td></tr>
-              <tr><th scope="row">Model year</th><td>${y.year}</td></tr>
-              <tr><th scope="row">Type</th><td>${esc(y.type)}</td></tr>
-              <tr><th scope="row">Cabins</th><td>${y.cabins}</td></tr>
-              <tr><th scope="row">Guests</th><td>${y.guests}</td></tr>
-              <tr><th scope="row">Berths</th><td>${y.berths}</td></tr>
-              <tr><th scope="row">Heads</th><td>${y.heads}</td></tr>
-              <tr><th scope="row">Charter</th><td>Bareboat or skippered</td></tr>
-              <tr><th scope="row">Bases</th><td>Lefkas (Ionian) · Athens (Aegean)</td></tr>
+              ${specifications.map(spec => `<tr><th scope="row">${esc(spec.label)}</th><td>${esc(spec.value)}</td></tr>`).join('\n              ')}
             </tbody>
           </table>
           <p class="spec-note">Full technical details, sail wardrobe, equipment list and pricing for your dates are sent with every quotation.</p>
@@ -1444,7 +1450,23 @@ const yachtPage = (y) => {
     </div>
   </section>
 
-  <section>
+  ${y.gallery.length ? `<section>
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">On board</p>
+        <h2 class="display">Explore ${esc(y.name)}.</h2>
+      </div>
+      <div class="fleet-grid full reveal-stagger">
+        ${y.gallery.map(photo => `<div class="yacht-hero-media">
+          <a class="yacht-link" href="${esc(photo.url)}" aria-label="View photo: ${esc(photo.alt)}">
+            <img src="${esc(photo.url)}" alt="${esc(photo.alt)}" width="1280" height="760" loading="lazy" decoding="async">
+          </a>
+        </div>`).join('\n        ')}
+      </div>
+    </div>
+  </section>` : ''}
+
+  ${more.length ? `<section>
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow">Also worth seeing</p>
@@ -1454,7 +1476,7 @@ const yachtPage = (y) => {
         ${fleetCards(more, 1)}
       </div>
     </div>
-  </section>
+  </section>` : ''}
 
   ${ctaBand(r, {
     eyebrow:'Availability',

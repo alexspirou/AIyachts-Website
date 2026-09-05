@@ -1,9 +1,13 @@
 # AIyachts — website
 
-Static, multipage site. No framework, no build step required to *serve* it — the
-`.html` files in this folder are the site. A small Node script regenerates them
-from shared templates so the header, footer, SEO tags and structured data stay
-identical across every page.
+Static, multipage site with yacht content managed in Sanity. The Node generator
+reads published, visible yachts from Sanity and writes the current website to
+`dist/`. Shared templates keep the header, footer, SEO tags and structured data
+consistent. The older HTML files in the repository root are an archived snapshot;
+use `dist/` for the connected website.
+
+See [Sanity setup and editing](docs/SANITY.md) for the local editor, yacht fields,
+and publishing workflow. Requires Node.js 22.12 or later.
 
 ```
 .
@@ -28,14 +32,22 @@ identical across every page.
 ## Regenerating the pages
 
 ```bash
-node build/build.mjs
+npm install
+npm run build
+npm run preview
 ```
 
-Rewrites all 26 pages plus `sitemap.xml`, `robots.txt` and `site.webmanifest`.
+Open `http://localhost:8080/fleet.html`. The build generates the main pages, one
+page per published active yacht, plus `sitemap.xml`, `robots.txt` and
+`site.webmanifest`. Yacht pages removed from Sanity are removed from the next
+build. An empty fleet displays an availability message. Failed Sanity requests
+stop the build and preserve the previous successful preview.
 
 | Edit this | To change |
 |---|---|
-| `build/site.mjs` | domain, phone numbers, email, addresses, the fleet list, the gallery list and its filters |
+| Sanity Studio | yacht names, photos, galleries, specifications, descriptions, bases, charter options, visibility and display order |
+| `sanity.config.json` | Sanity project ID and dataset |
+| `build/site.mjs` | domain, phone numbers, email, addresses, the experiences gallery list and its filters |
 | `build/pages.mjs` | the copy of every page |
 | `build/components.mjs` | header, footer, breadcrumbs, page hero, cards, structured data |
 | `assets/css/site.css` | all styling (single stylesheet) |
@@ -49,10 +61,14 @@ apex with a 301 so only one host is indexed.
 ## Checking your work
 
 ```bash
-node build/build.mjs && python3 build/check.py
+npm test
+npm run build
+npm run studio:build
 ```
 
-`build/check.py` verifies that every local `href`/`src`/`srcset` resolves, that
+`build/tests/` checks the Sanity loader and generated yacht content, including
+empty fleets and removing outdated pages. The optional `build/check.py` verifies
+that every local `href`/`src`/`srcset` resolves, that
 titles and descriptions are unique and the right length, that each page has
 exactly one `<h1>`, that every `<img>` has an `alt`, and that all JSON-LD parses.
 
@@ -64,15 +80,14 @@ Videos were encoded with ffmpeg (H.264, faststart, no audio).
 
 ## Deploying
 
-Upload the whole folder except `build/` and `AIyachts-Photos/`. Any static host
-works. If your host supports it, map unknown paths to `404.html`.
+Upload only the contents of `dist/`. Any static host works. If your host supports
+it, map unknown paths to `404.html`. Rebuild and deploy after publishing changes
+in Sanity. Once a host is chosen, a Sanity webhook can trigger its build hook.
 
 ## Things worth filling in later
 
-- **Yacht specifications.** Only the figures AIyachts supplied are published
-  (year, cabins, guests, berths, heads). Length, draft, engine, sail wardrobe and
-  pricing are deliberately absent rather than guessed — add them to the fleet
-  entries in `build/site.mjs` and the spec tables will pick them up.
+- **Yacht specifications.** Add technical details and units under Additional
+  specifications in Sanity Studio. Publish and rebuild to update the spec tables.
 - **Forms.** The enquiry and newsletter forms open a pre-filled email to
   `aiyachtsea@gmail.com`; there is no backend. Swap in a form endpoint when one
   exists.

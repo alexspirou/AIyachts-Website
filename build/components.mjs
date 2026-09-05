@@ -2,7 +2,12 @@ import { SITE, NAV, FLEET, GALLERY, GALLERY_FILTERS } from './site.mjs';
 import { LQIP } from './lqip.mjs';
 
 export const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-export const abs = p => SITE.origin + '/' + String(p).replace(/^\//,'');
+export const abs = p => /^https?:\/\//i.test(String(p)) ? String(p) : SITE.origin + '/' + String(p).replace(/^\//,'');
+export const featuredFleet = (limit) => {
+  const featured = FLEET.filter(y => y.featured);
+  return (featured.length ? featured : FLEET).slice(0, limit);
+};
+export const emptyFleetMessage = 'Our fleet is being updated. Please contact us for current availability.';
 /* relative prefix for a page that lives `depth` folders deep */
 export const up = depth => '../'.repeat(depth || 0);
 
@@ -16,7 +21,7 @@ export function head(page){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(page.title)}</title>
 <meta name="description" content="${esc(page.description)}">
-<link rel="canonical" href="${url}">
+<link rel="canonical" href="${esc(url)}">
 <meta name="robots" content="${page.noindex ? 'noindex,follow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'}">
 <meta name="author" content="${SITE.name}">
 <meta name="theme-color" content="${SITE.themeLight}" media="(prefers-color-scheme: light)">
@@ -26,17 +31,17 @@ export function head(page){
 <meta property="og:type" content="${type}">
 <meta property="og:site_name" content="${SITE.name}">
 <meta property="og:locale" content="${SITE.locale}">
-<meta property="og:url" content="${url}">
+<meta property="og:url" content="${esc(url)}">
 <meta property="og:title" content="${esc(page.ogTitle || page.title)}">
 <meta property="og:description" content="${esc(page.description)}">
-<meta property="og:image" content="${ogImg}">
+<meta property="og:image" content="${esc(ogImg)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${esc(page.ogAlt || page.h1 || SITE.name)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(page.ogTitle || page.title)}">
 <meta name="twitter:description" content="${esc(page.description)}">
-<meta name="twitter:image" content="${ogImg}">
+<meta name="twitter:image" content="${esc(ogImg)}">
 
 <link rel="icon" href="${r}assets/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="${r}assets/favicon-192.png" sizes="192x192" type="image/png">
@@ -163,8 +168,7 @@ export function footer(page){
       </div>
       <div class="foot-col">
         <h2 class="foot-h">Popular yachts</h2>
-        ${['lagoon-40','lagoon-450-f','bavaria-51-1','jeanneau-sun-odyssey-469','beneteau-oceanis-50-family']
-          .map(s => { const y = FLEET.find(f=>f.slug===s); return `<a href="${r}fleet/${s}.html">${esc(y.name)}</a>`; }).join('\n        ')}
+        ${featuredFleet(5).map(y => `<a href="${r}fleet/${y.slug}.html">${esc(y.name)}</a>`).join('\n        ') || `<a href="${r}contact.html">Ask about yacht availability</a>`}
       </div>
     </nav>
 
@@ -184,11 +188,11 @@ export function fleetCards(list, depth, {scroller=false} = {}){
   return list.map(y => `<article class="yacht-card">
       <a class="yacht-link" href="${r}fleet/${y.slug}.html">
         <div class="yacht-art">
-          <img src="${r}assets/fleet/${y.slug}.jpg" alt="${esc(y.name)} — ${esc(y.cat.toLowerCase())} sailing yacht for charter in Greece" width="640" height="380" loading="lazy" decoding="async">
+          <img src="${esc(y.imageUrl)}" alt="${esc(y.imageAlt)}" width="640" height="380" loading="lazy" decoding="async">
           <span class="yacht-flag">${esc(y.type)}</span>
         </div>
         <div class="yacht-body">
-          <p class="yacht-cat">${esc(y.cat)} · ${y.year}</p>
+          <p class="yacht-cat">${esc(y.cat)} · ${esc(y.year)}</p>
           <h3 class="display">${esc(y.name)}</h3>
           <div class="yacht-specs"><span>${y.guests} guests</span><span>${y.berths} berths</span><span>${y.heads} ${y.heads>1?'heads':'head'}</span></div>
           <span class="yacht-more">View yacht <span class="arrow" aria-hidden="true">→</span></span>
@@ -317,5 +321,5 @@ export function pageGraph(page){
 export function jsonLd(page){
   const graph = baseGraph().concat(pageGraph(page));
   const data = { '@context':'https://schema.org', '@graph': graph };
-  return `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }

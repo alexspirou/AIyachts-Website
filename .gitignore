@@ -1,3 +1,11 @@
 # macOS Finder metadata
 .DS_Store
 **/.DS_Store
+
+# Dependencies, generated previews, and local credentials
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.sanity/
