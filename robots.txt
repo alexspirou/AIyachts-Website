@@ -1,0 +1,6 @@
+# AIyachts
+User-agent: *
+Allow: /
+Disallow: /404.html
+
+Sitemap: https://ai-yachting.com/sitemap.xml

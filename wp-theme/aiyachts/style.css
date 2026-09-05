@@ -1,0 +1,49 @@
+/*
+Theme Name:   AIyachts
+Theme URI:    https://ai-yachting.com/
+Author:       BRAIN GROUP
+Author URI:   https://braingroup.tech/
+Description:  Lightweight custom theme for AIyachts — yacht charter, brokerage and yacht management in Greece. Converted from the static AIyachts site; all layout lives in assets/css/site.css and all behaviour in assets/js/site.js, with editable content exposed through ACF.
+Version:      1.0.0
+Requires at least: 6.3
+Tested up to: 6.8
+Requires PHP: 7.4
+License:      GNU General Public License v2 or later
+License URI:  http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain:  aiyachts
+Tags:         custom-menu, featured-images, translation-ready, one-column, full-width-template
+*/
+
+/*
+ * ---------------------------------------------------------------------------
+ * This file exists for the WordPress theme header above and for small
+ * WordPress-only corrections. The site's design system is a single stylesheet
+ * at assets/css/site.css, enqueued as the handle `aiyachts-site`.
+ *
+ * Put new design rules in assets/css/site.css, not here.
+ * ---------------------------------------------------------------------------
+ */
+
+/* --- WordPress admin bar: keep the sticky header clear of it --- */
+body.admin-bar #siteHeader { top: 32px; }
+body.admin-bar #mobile-menu { top: 32px; }
+
+@media screen and (max-width: 782px) {
+  body.admin-bar #siteHeader { top: 46px; }
+  body.admin-bar #mobile-menu { top: 46px; }
+}
+
+/* --- Core alignment classes, in case block content is ever added to a page --- */
+.alignleft   { float: left;  margin: 0 1.5rem 1rem 0; }
+.alignright  { float: right; margin: 0 0 1rem 1.5rem; }
+.aligncenter { display: block; margin-left: auto; margin-right: auto; }
+.alignwide, .alignfull { max-width: 100%; }
+
+/* --- Accessibility helper WordPress core markup expects --- */
+.screen-reader-text {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
